@@ -1,57 +1,44 @@
-# Sample Hardhat 3 Beta Project (`node:test` and `viem`)
+# ⚡ Gasless Token dApp (EIP-2612)
 
-This project showcases a Hardhat 3 Beta project using the native Node.js test runner (`node:test`) and the `viem` library for Ethereum interactions.
+A Web3 dApp that enables **gasless token transfers** using the EIP-2612 permit mechanism.  
+Users can approve and transfer tokens **without paying gas fees**, thanks to off-chain signatures and a relayer.
 
-To learn more about the Hardhat 3 Beta, please visit the [Getting Started guide](https://hardhat.org/docs/getting-started#getting-started-with-hardhat-3). To share your feedback, join our [Hardhat 3 Beta](https://hardhat.org/hardhat3-beta-telegram-group) Telegram group or [open an issue](https://github.com/NomicFoundation/hardhat/issues/new) in our GitHub issue tracker.
+---
 
-## Project Overview
+## 🔥 Features
 
-This example project includes:
+- ✅ Gasless approvals using **EIP-2612 (permit)**
+- ✅ Off-chain signature (no gas required)
+- ✅ Relayer executes transactions on behalf of user
+- ✅ ERC20 token with permit functionality
+- ✅ Sepolia testnet integration
+- ✅ Clean frontend with MetaMask support
 
-- A simple Hardhat configuration file.
-- Foundry-compatible Solidity unit tests.
-- TypeScript integration tests using [`node:test`](nodejs.org/api/test.html), the new Node.js native test runner, and [`viem`](https://viem.sh/).
-- Examples demonstrating how to connect to different types of networks, including locally simulating OP mainnet.
+---
 
-## Usage
+## 🛠️ Tech Stack
 
-### Running Tests
+- Solidity (ERC20 + EIP-2612)
+- Hardhat
+- Ethers.js
+- HTML / CSS / JavaScript
+- MetaMask
+- Sepolia Testnet
 
-To run all the tests in the project, execute the following command:
+---
 
-```shell
-npx hardhat test
-```
+## ⚙️ How It Works
 
-You can also selectively run the Solidity or `node:test` tests:
+1. User signs a **permit message (EIP-712)** off-chain
+2. Signature is generated (v, r, s)
+3. Relayer calls:
+   - `permit()`
+   - `transferFrom()`
+4. Tokens are transferred without user paying gas
 
-```shell
-npx hardhat test solidity
-npx hardhat test nodejs
-```
+---
 
-### Make a deployment to Sepolia
+## 📦 Smart Contract
 
-This project includes an example Ignition module to deploy the contract. You can deploy this module to a locally simulated chain or to Sepolia.
+Deployed on Sepolia:
 
-To run the deployment to a local chain:
-
-```shell
-npx hardhat ignition deploy ignition/modules/Counter.ts
-```
-
-To run the deployment to Sepolia, you need an account with funds to send the transaction. The provided Hardhat configuration includes a Configuration Variable called `SEPOLIA_PRIVATE_KEY`, which you can use to set the private key of the account you want to use.
-
-You can set the `SEPOLIA_PRIVATE_KEY` variable using the `hardhat-keystore` plugin or by setting it as an environment variable.
-
-To set the `SEPOLIA_PRIVATE_KEY` config variable using `hardhat-keystore`:
-
-```shell
-npx hardhat keystore set SEPOLIA_PRIVATE_KEY
-```
-
-After setting the variable, you can run the deployment with the Sepolia network:
-
-```shell
-npx hardhat ignition deploy --network sepolia ignition/modules/Counter.ts
-```
