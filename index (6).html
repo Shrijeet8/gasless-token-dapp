@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GaslessToken — Permit Transfer · Sepolia</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+
+<style>
+/* ════════════════════════════════════════════════
+   DESIGN SYSTEM
+   ════════════════════════════════════════════════ */ 
+:root {
+  --ink:           #070910;
+  --ink-2:         #0c0f1a;
+  --glass:         rgba(255,255,255,0.035);
+  --glass-hi:      rgba(255,255,255,0.07);
+  --border:        rgba(255,255,255,0.07);
+  --border-hi:     rgba(88,101,249,0.4);
+
+  --electric:      #5865f9;
+  --electric-hi:   #7c87ff;
+  --electric-lo:   rgba(88,101,249,0.15);
+  --electric-glow: 0 0 30px rgba(88,101,249,0.55), 0 0 80px rgba(88,101,249,0.18);
+
+  --acid:          #a8ff3e;
+  --acid-hi:       #c5ff70;
+  --acid-lo:       rgba(168,255,62,0.12);
+  --acid-glow:     0 0 20px rgba(168,255,62,0.5);
+
+  --rose:          #ff4d6d;
+  --rose-lo:       rgba(255,77,109,0.14);
+  --amber:         #ffb347;
+  --amber-lo:      rgba(255,179,71,0.12);
+
+  --text-1: #eef0ff;
+  --text-2: rgba(200,205,240,0.65);
+  --text-3: rgba(160,170,210,0.38);
+
+  --r-xl: 24px; --r-lg: 16px; --r-md: 10px; --r-sm: 6px; --r-pill: 999px;
+  --font-ui:   'Outfit', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+  --ease-spring: cubic-bezier(0.34,1.56,0.64,1);
+  --ease-out:    cubic-bezier(0.16,1,0.3,1);
+}
+
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+html { color-scheme: dark; }
+body {
+  min-height: 100vh;
+  background: var(--ink);
+  color: var(--text-1);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+input,button { font-family: inherit; }
+
+/* ── BACKGROUND ── */
+#bg-layer {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+}
+#bg-layer::before {
+  content: '';
+  position: absolute;
+  width: 700px; height: 700px;
+  top: -200px; left: -100px;
+  background: radial-gradient(circle, rgba(88,101,249,0.16) 0%, transparent 70%);
+  animation: orb1 14s ease-in-out infinite alternate;
+}
+#bg-layer::after {
+  content: '';
+  position: absolute;
+  width: 600px; height: 600px;
+  bottom: -160px; right: -80px;
+  background: radial-gradient(circle, rgba(168,255,62,0.09) 0%, transparent 70%);
+  animation: orb2 18s ease-in-out infinite alternate;
+}
+@keyframes orb1 { from{transform:translate(0,0) scale(1);} to{transform:translate(80px,60px) scale(1.15);} }
+@keyframes orb2 { from{transform:translate(0,0) scale(1);} to{transform:translate(-60px,-40px) scale(1.2);} }
+
+.bg-grid {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image: radial-gradient(rgba(255,255,255,0.055) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+#particle-canvas { position:fixed; inset:0; z-index:0; pointer-events:none; }
+
+/* ── SHELL ── */
+.shell { position:relative; z-index:1; min-height:100vh; display:flex; flex-direction:column; }
+
+/* ════════════════════════════════════════════════
+   TOPBAR
+   ════════════════════════════════════════════════ */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 36px;
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(28px) saturate(160%);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  background: rgba(7,9,16,0.72);
+  position: sticky; top: 0; z-index: 200;
+}
+.logo { display:flex; align-items:center; gap:12px; }
+.logo-hex {
+  width: 38px; height: 38px; border-radius: 10px;
+  background: linear-gradient(135deg, var(--electric) 0%, #8b5cf6 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  animation: logo-pulse 4s ease-in-out infinite;
+}
+@keyframes logo-pulse {
+  0%,100%{box-shadow:0 0 20px rgba(88,101,249,0.4);}
+  50%{box-shadow:0 0 40px rgba(88,101,249,0.7),0 0 80px rgba(88,101,249,0.2);}
+}
+.logo-wordmark {
+  font-size:19px; font-weight:800; letter-spacing:-0.4px;
+  background: linear-gradient(100deg, var(--text-1) 40%, var(--electric-hi));
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+}
+.logo-sub {
+  font-family:var(--font-mono); font-size:10px; color:var(--text-3);
+  letter-spacing:0.12em; text-transform:uppercase; margin-top:1px;
+}
+.topbar-right { display:flex; align-items:center; gap:12px; }
+
+.net-pill {
+  display:flex; align-items:center; gap:7px;
+  padding:7px 14px; border-radius:var(--r-pill);
+  font-family:var(--font-mono); font-size:11px;
+  border:1px solid transparent; transition:all 0.3s; cursor:default;
+}
+.net-pill.correct { background:var(--acid-lo); border-color:rgba(168,255,62,0.3); color:var(--acid); }
+.net-pill.wrong   { background:var(--rose-lo); border-color:rgba(255,77,109,0.3); color:var(--rose); cursor:pointer; animation:net-warn 1.5s ease-in-out infinite; }
+.net-pill.idle    { background:var(--glass);   border-color:var(--border); color:var(--text-3); }
+@keyframes net-warn { 0%,100%{box-shadow:none;} 50%{box-shadow:0 0 14px rgba(255,77,109,0.35);} }
+.net-dot { width:7px; height:7px; border-radius:50%; animation:dot-breathe 1.8s ease-in-out infinite; }
+.net-pill.correct .net-dot { background:var(--acid); }
+.net-pill.wrong   .net-dot { background:var(--rose); }
+.net-pill.idle    .net-dot { background:var(--text-3); }
+@keyframes dot-breathe { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:0.5;transform:scale(0.7);} }
+
+.wallet-chip {
+  display:flex; align-items:center; gap:8px;
+  padding:7px 14px; border-radius:var(--r-pill);
+  background:var(--glass-hi); border:1px solid var(--border);
+  font-family:var(--font-mono); font-size:12px; color:var(--text-2);
+  transition:all 0.3s;
+}
+.wallet-chip.connected { border-color:rgba(88,101,249,0.35); color:var(--text-1); }
+.w-avatar { width:20px; height:20px; border-radius:50%; background:linear-gradient(135deg,var(--electric),var(--acid)); flex-shrink:0; }
+
+/* ── NETWORK BANNER ── */
+.net-banner {
+  display:none; align-items:center; justify-content:center; gap:14px;
+  padding:14px 24px;
+  background:linear-gradient(90deg,rgba(255,77,109,0.1),rgba(255,77,109,0.05));
+  border-bottom:1px solid rgba(255,77,109,0.2);
+  font-size:14px; color:var(--rose); font-weight:500;
+}
+.net-banner.show { display:flex; animation:slide-down 0.35s var(--ease-out); }
+@keyframes slide-down { from{transform:translateY(-100%);opacity:0;} to{transform:translateY(0);opacity:1;} }
+.net-banner .switch-btn {
+  padding:6px 16px; border-radius:var(--r-pill);
+  border:1px solid var(--rose); background:var(--rose-lo);
+  color:var(--rose); font-size:12px; font-weight:600;
+  cursor:pointer; transition:all 0.2s;
+}
+.net-banner .switch-btn:hover { background:rgba(255,77,109,0.25); }
+
+/* ════════════════════════════════════════════════
+   MAIN
+   ════════════════════════════════════════════════ */
+main {
+  flex:1; padding:48px 20px 100px;
+  display:flex; flex-direction:column; align-items:center; gap:36px;
+}
+
+/* ── HERO ── */
+.hero { text-align:center; max-width:600px; animation:enter 0.8s var(--ease-out) both; }
+@keyframes enter { from{opacity:0;transform:translateY(30px);} to{opacity:1;transform:translateY(0);} }
+.hero-kicker {
+  display:inline-flex; align-items:center; gap:8px;
+  font-family:var(--font-mono); font-size:11px;
+  letter-spacing:0.18em; text-transform:uppercase;
+  color:var(--electric-hi); margin-bottom:20px;
+  padding:5px 14px; border-radius:var(--r-pill);
+  border:1px solid var(--electric-lo); background:var(--electric-lo);
+}
+.hero h1 {
+  font-size:clamp(30px,5vw,52px); font-weight:900;
+  line-height:1.05; letter-spacing:-1.5px; margin-bottom:16px;
+}
+.hero h1 span {
+  background:linear-gradient(120deg,var(--electric-hi) 0%,#c084fc 50%,var(--acid) 100%);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+}
+.hero p { color:var(--text-2); font-size:15px; line-height:1.7; font-weight:300; }
+
+/* ── STEP TRACK ── */
+.step-track {
+  display:flex; align-items:center; width:100%; max-width:500px;
+  animation:enter 0.9s var(--ease-out) 0.1s both;
+}
+.step-node { display:flex; flex-direction:column; align-items:center; gap:8px; flex:1; position:relative; }
+.step-node:not(:last-child)::after {
+  content:''; position:absolute;
+  top:19px; left:calc(50% + 19px); width:calc(100% - 38px); height:1px;
+  background:var(--border); transition:background 0.6s,box-shadow 0.6s;
+}
+.step-node.done:not(:last-child)::after {
+  background:linear-gradient(90deg,var(--electric),#a78bfa);
+  box-shadow:0 0 6px rgba(88,101,249,0.6);
+}
+.step-ring {
+  width:38px; height:38px; border-radius:50%;
+  border:1.5px solid var(--border); background:var(--ink-2);
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--font-mono); font-size:13px; font-weight:500;
+  color:var(--text-3); position:relative; z-index:1; transition:all 0.4s var(--ease-out);
+}
+.step-node.active .step-ring {
+  border-color:var(--electric); color:var(--electric-hi);
+  animation:ring-pulse 2s ease-in-out infinite;
+}
+.step-node.done .step-ring { border-color:var(--acid); background:var(--acid-lo); color:var(--acid); }
+@keyframes ring-pulse {
+  0%,100%{box-shadow:0 0 0 4px rgba(88,101,249,0.12);}
+  50%{box-shadow:0 0 0 8px rgba(88,101,249,0.22),var(--electric-glow);}
+}
+.step-lbl { font-size:10px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-3); font-family:var(--font-mono); white-space:nowrap; transition:color 0.4s; }
+.step-node.active .step-lbl { color:var(--electric-hi); }
+.step-node.done   .step-lbl { color:var(--acid); }
+
+/* ════════════════════════════════════════════════
+   CARDS
+   ════════════════════════════════════════════════ */
+.card-grid {
+  display:grid; grid-template-columns:repeat(2,1fr);
+  gap:20px; width:100%; max-width:900px;
+  animation:enter 1s var(--ease-out) 0.2s both;
+}
+@media(max-width:720px){.card-grid{grid-template-columns:1fr;}}
+.span-2 { grid-column:1/-1; }
+
+.card {
+  background:var(--glass); border:1px solid var(--border);
+  border-radius:var(--r-xl); padding:26px 28px;
+  backdrop-filter:blur(30px) saturate(140%); -webkit-backdrop-filter:blur(30px) saturate(140%);
+  position:relative; overflow:hidden;
+  transition:border-color 0.3s,transform 0.3s,box-shadow 0.3s;
+}
+.card::before {
+  content:''; position:absolute; top:0; left:10%; right:10%; height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.14),transparent);
+}
+.card:hover { border-color:rgba(88,101,249,0.25); transform:translateY(-2px); box-shadow:0 20px 60px rgba(0,0,0,0.4); }
+
+.card-badge {
+  width:42px; height:42px; border-radius:12px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:18px; margin-bottom:18px;
+}
+.cb-e { background:var(--electric-lo); border:1px solid rgba(88,101,249,0.2); }
+.cb-a { background:var(--acid-lo);     border:1px solid rgba(168,255,62,0.2); }
+
+.card-label { font-family:var(--font-mono); font-size:10px; font-weight:500; letter-spacing:0.14em; text-transform:uppercase; color:var(--text-3); margin-bottom:8px; }
+.card-val   { font-size:22px; font-weight:700; color:var(--text-1); letter-spacing:-0.5px; word-break:break-all; }
+.card-val.mono { font-family:var(--font-mono); font-size:12px; font-weight:400; line-height:1.7; }
+.card-val.big  { font-size:36px; font-weight:800; letter-spacing:-1.5px; background:linear-gradient(120deg,var(--text-1) 50%,var(--electric-hi)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+
+.addr-sub  { font-family:var(--font-mono); font-size:11px; color:var(--text-2); margin-top:4px; line-height:1.6; word-break:break-all; }
+.token-row { display:flex; align-items:center; gap:10px; margin-top:6px; }
+.token-chip {
+  font-family:var(--font-mono); font-size:11px;
+  padding:3px 10px; border-radius:var(--r-pill);
+  background:var(--electric-lo); border:1px solid rgba(88,101,249,0.25); color:var(--electric-hi);
+}
+.contract-addr { font-family:var(--font-mono); font-size:10px; color:var(--text-3); }
+
+/* ════════════════════════════════════════════════
+   INPUTS
+   ════════════════════════════════════════════════ */
+.field { display:flex; flex-direction:column; gap:6px; width:100%; }
+.field label { font-family:var(--font-mono); font-size:10px; font-weight:500; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-3); }
+.field input {
+  background:rgba(255,255,255,0.04); border:1px solid var(--border);
+  border-radius:var(--r-md); padding:13px 16px;
+  font-family:var(--font-mono); font-size:13px; color:var(--text-1);
+  width:100%; outline:none;
+  transition:border-color 0.25s,box-shadow 0.25s,background 0.25s;
+}
+.field input::placeholder { color:var(--text-3); }
+.field input:focus { border-color:var(--electric); box-shadow:0 0 0 3px rgba(88,101,249,0.15); background:rgba(88,101,249,0.05); }
+.field input:disabled { opacity:0.35; cursor:not-allowed; }
+.field-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+@media(max-width:540px){.field-row{grid-template-columns:1fr;}}
+
+/* ════════════════════════════════════════════════
+   BUTTONS
+   ════════════════════════════════════════════════ */
+.btn {
+  display:inline-flex; align-items:center; justify-content:center; gap:9px;
+  padding:13px 24px; border-radius:var(--r-md);
+  font-size:14px; font-weight:700; letter-spacing:0.01em;
+  cursor:pointer; border:none; outline:none;
+  position:relative; overflow:hidden;
+  transition:transform 0.2s var(--ease-spring),box-shadow 0.25s,opacity 0.2s;
+  white-space:nowrap;
+}
+.btn::before {
+  content:''; position:absolute; top:0; left:-100%; width:55%; height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.13),transparent);
+  transform:skewX(-18deg); transition:left 0.55s ease;
+}
+.btn:not(:disabled):hover::before { left:160%; }
+.btn:not(:disabled):hover  { transform:translateY(-2px); }
+.btn:not(:disabled):active { transform:translateY(0) scale(0.98); }
+.btn:disabled { opacity:0.28; cursor:not-allowed; pointer-events:none; }
+
+.btn-primary {
+  background:linear-gradient(135deg,var(--electric) 0%,#8b5cf6 100%);
+  color:#fff; box-shadow:0 4px 20px rgba(88,101,249,0.3);
+}
+.btn-primary:not(:disabled):hover { box-shadow:0 8px 30px rgba(88,101,249,0.55),0 0 0 1px rgba(88,101,249,0.4); }
+
+.btn-outline {
+  background:transparent; color:var(--electric-hi);
+  border:1.5px solid rgba(88,101,249,0.45);
+}
+.btn-outline:not(:disabled):hover { background:var(--electric-lo); border-color:var(--electric); box-shadow:var(--electric-glow); }
+
+.btn-acid {
+  background:transparent; color:var(--acid);
+  border:1.5px solid rgba(168,255,62,0.4);
+}
+.btn-acid:not(:disabled):hover { background:var(--acid-lo); border-color:var(--acid); box-shadow:var(--acid-glow); }
+
+.btn-full { width:100%; }
+
+.btn-spin { display:none; width:15px; height:15px; border:2px solid transparent; border-top-color:currentColor; border-radius:50%; animation:spin 0.65s linear infinite; flex-shrink:0; }
+.btn.loading .btn-spin { display:block; }
+.btn.loading .btn-txt  { opacity:0.6; }
+@keyframes spin { to{transform:rotate(360deg);} }
+
+/* ════════════════════════════════════════════════
+   ACTION CARD
+   ════════════════════════════════════════════════ */
+.action-step { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; flex-wrap:wrap; }
+.step-info   { flex:1; min-width:200px; }
+.step-title  {
+  font-size:15px; font-weight:700; color:var(--text-1);
+  margin-bottom:4px; display:flex; align-items:center; gap:8px;
+}
+.step-badge  {
+  width:22px; height:22px; border-radius:6px;
+  background:var(--electric-lo); border:1px solid rgba(88,101,249,0.3);
+  font-family:var(--font-mono); font-size:11px; font-weight:500; color:var(--electric-hi);
+  display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.step-desc { font-size:13px; color:var(--text-2); line-height:1.55; font-weight:300; }
+.step-desc code { color:var(--electric-hi); font-family:var(--font-mono); }
+
+.divider { height:1px; background:linear-gradient(90deg,transparent,var(--border),transparent); margin:24px 0; }
+
+/* ── SIGNATURE PREVIEW ── */
+.sig-preview {
+  display:none; flex-direction:column; gap:0;
+  background:rgba(0,0,0,0.4); border:1px solid rgba(168,255,62,0.15);
+  border-radius:var(--r-lg); overflow:hidden; margin-top:20px;
+}
+.sig-preview.open { display:flex; animation:expand 0.35s var(--ease-out); }
+@keyframes expand { from{opacity:0;transform:translateY(-10px);} to{opacity:1;transform:translateY(0);} }
+.sig-hdr {
+  display:flex; align-items:center; gap:8px; padding:12px 18px;
+  background:rgba(168,255,62,0.06); border-bottom:1px solid rgba(168,255,62,0.1);
+  font-family:var(--font-mono); font-size:11px; font-weight:500;
+  color:var(--acid); letter-spacing:0.1em; text-transform:uppercase;
+}
+.sig-hdr-dot { width:6px; height:6px; border-radius:50%; background:var(--acid); animation:dot-breathe 1.5s ease-in-out infinite; }
+.sig-body {
+  padding:16px 18px;
+  display:grid; grid-template-columns:auto 1fr; gap:4px 16px;
+  font-family:var(--font-mono); font-size:11px; line-height:1.9;
+}
+.sk { color:var(--electric-hi); }
+.sv { color:var(--text-2); word-break:break-all; }
+.sv.hl { color:var(--acid); }
+
+/* ════════════════════════════════════════════════
+   CONSOLE
+   ════════════════════════════════════════════════ */
+.console-wrap { background:rgba(0,0,0,0.5); border:1px solid var(--border); border-radius:var(--r-xl); overflow:hidden; }
+.console-bar {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:11px 18px; background:rgba(255,255,255,0.025); border-bottom:1px solid var(--border);
+}
+.mac-dots { display:flex; gap:7px; }
+.mac-dots span { width:12px; height:12px; border-radius:50%; }
+.d-r{background:#ff5f57;} .d-y{background:#febc2e;} .d-g{background:#28c840;}
+.console-ttl { font-family:var(--font-mono); font-size:11px; color:var(--text-3); letter-spacing:0.1em; }
+.console-clear { font-family:var(--font-mono); font-size:11px; color:var(--text-3); background:none; border:none; cursor:pointer; transition:color 0.2s; }
+.console-clear:hover { color:var(--rose); }
+.console-body { padding:16px; min-height:180px; max-height:260px; overflow-y:auto; font-family:var(--font-mono); font-size:12px; line-height:2; }
+.console-body::-webkit-scrollbar{width:3px;} .console-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.log-row { display:flex; gap:14px; animation:log-pop 0.2s var(--ease-out); }
+@keyframes log-pop { from{opacity:0;transform:translateX(-6px);} to{opacity:1;transform:translateX(0);} }
+.log-ts  { color:var(--text-3); flex-shrink:0; user-select:none; }
+.log-msg { color:var(--text-2); }
+.log-row.info    .log-msg { color:var(--electric-hi); }
+.log-row.success .log-msg { color:var(--acid); }
+.log-row.error   .log-msg { color:var(--rose); }
+.log-row.warn    .log-msg { color:var(--amber); }
+.cursor { display:inline-block; width:7px; height:13px; background:var(--electric); animation:cur-blink 1s step-end infinite; vertical-align:middle; margin-left:3px; }
+@keyframes cur-blink { 0%,100%{opacity:1;} 50%{opacity:0;} }
+
+/* ════════════════════════════════════════════════
+   GASLESS BADGE (floating)
+   ════════════════════════════════════════════════ */
+.gasless-float {
+  position:fixed; bottom:28px; left:50%; transform:translateX(-50%);
+  z-index:300;
+  display:flex; align-items:center; gap:9px;
+  padding:10px 22px; border-radius:var(--r-pill);
+  background:rgba(10,12,22,0.88); border:1px solid rgba(168,255,62,0.35);
+  backdrop-filter:blur(20px);
+  font-family:var(--font-mono); font-size:11px; font-weight:500;
+  color:var(--acid); letter-spacing:0.1em; text-transform:uppercase;
+  box-shadow:0 0 20px rgba(168,255,62,0.15),0 8px 30px rgba(0,0,0,0.5);
+  animation:float-b 3.5s ease-in-out infinite; pointer-events:none; white-space:nowrap;
+}
+@keyframes float-b {
+  0%,100%{transform:translateX(-50%) translateY(0);box-shadow:0 0 20px rgba(168,255,62,0.2);}
+  50%{transform:translateX(-50%) translateY(-5px);box-shadow:0 0 35px rgba(168,255,62,0.45);}
+}
+.gf-dot { width:7px; height:7px; border-radius:50%; background:var(--acid); box-shadow:0 0 6px var(--acid); animation:dot-breathe 1.4s ease-in-out infinite; }
+
+/* ════════════════════════════════════════════════
+   TOASTS
+   ════════════════════════════════════════════════ */
+.toast-rack { position:fixed; top:84px; right:20px; z-index:500; display:flex; flex-direction:column; gap:10px; pointer-events:none; }
+.toast {
+  display:flex; align-items:flex-start; gap:12px;
+  padding:14px 18px; border-radius:var(--r-lg);
+  min-width:280px; max-width:360px;
+  backdrop-filter:blur(20px); pointer-events:auto;
+  animation:toast-in 0.4s var(--ease-spring); cursor:pointer;
+}
+@keyframes toast-in { from{opacity:0;transform:translateX(40px) scale(0.88);} to{opacity:1;transform:translateX(0) scale(1);} }
+.toast.success { background:rgba(10,20,12,0.92); border:1px solid rgba(168,255,62,0.3); }
+.toast.error   { background:rgba(22,8,12,0.92);  border:1px solid rgba(255,77,109,0.3); }
+.toast.info    { background:rgba(10,12,22,0.92); border:1px solid rgba(88,101,249,0.3); }
+.toast.warn    { background:rgba(22,15,6,0.92);  border:1px solid rgba(255,179,71,0.3); }
+.toast-icon { font-size:18px; flex-shrink:0; margin-top:1px; }
+.toast-title { font-size:13px; font-weight:600; margin-bottom:2px; }
+.toast.success .toast-title { color:var(--acid); }
+.toast.error   .toast-title { color:var(--rose); }
+.toast.info    .toast-title { color:var(--electric-hi); }
+.toast.warn    .toast-title { color:var(--amber); }
+.toast-body { font-size:12px; color:var(--text-2); font-family:var(--font-mono); line-height:1.5; }
+
+/* ── FOOTER ── */
+footer {
+  padding:24px 36px; border-top:1px solid var(--border);
+  text-align:center; font-family:var(--font-mono); font-size:11px;
+  color:var(--text-3); letter-spacing:0.08em;
+}
+footer a { color:var(--electric-hi); }
+
+/* ── RESPONSIVE ── */
+@media(max-width:600px){
+  .topbar{padding:16px 18px;}
+  .logo-sub{display:none;}
+  .topbar-right{gap:8px;}
+  .addr-txt-chip{display:none;}
+  main{padding:32px 14px 100px; gap:24px;}
+  .card{padding:20px 18px;}
+  .gasless-float{bottom:16px;font-size:10px;padding:8px 16px;}
+}
+</style>
+</head>
+<body>
+
+<div id="bg-layer"></div>
+<div class="bg-grid"></div>
+<canvas id="particle-canvas"></canvas>
+
+<div class="shell">
+
+<!-- ═══ TOPBAR ═══ -->
+<header class="topbar">
+  <div class="logo">
+    <div class="logo-hex">⚡</div>
+    <div>
+      <div class="logo-wordmark">GaslessToken</div>
+      <div class="logo-sub">EIP-2612 · Sepolia</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="net-pill idle" id="netPill">
+      <div class="net-dot"></div>
+      <span id="netPillTxt">No Network</span>
+    </div>
+    <div class="wallet-chip" id="walletChip">
+      <div class="w-avatar" id="wAvatar"></div>
+      <span class="addr-txt-chip" id="wChipAddr">Not connected</span>
+    </div>
+  </div>
+</header>
+
+<!-- Network Banner -->
+<div class="net-banner" id="netBanner">
+  ⚠️ Wrong network detected — this app requires <strong>&nbsp;Sepolia Testnet&nbsp;</strong>
+  <button class="switch-btn" id="btnSwitchNet">Switch to Sepolia</button>
+</div>
+
+<!-- ═══ MAIN ═══ -->
+<main>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-kicker">⚡ ERC20 Permit · Zero Gas Transfers</div>
+    <h1>Transfer Tokens<br/><span>Without Paying Gas</span></h1>
+    <p>Sign an EIP-712 typed-data permit off-chain — completely free. A relayer submits the permit + transfer on-chain without you spending a single gwei.</p>
+  </section>
+
+  <!-- Step Progress -->
+  <div class="step-track">
+    <div class="step-node active" id="sn1">
+      <div class="step-ring">1</div>
+      <div class="step-lbl">Connect</div>
+    </div>
+    <div class="step-node" id="sn2">
+      <div class="step-ring">2</div>
+      <div class="step-lbl">Sign Permit</div>
+    </div>
+    <div class="step-node" id="sn3">
+      <div class="step-ring">3</div>
+      <div class="step-lbl">Execute</div>
+    </div>
+  </div>
+
+  <!-- Card Grid -->
+  <div class="card-grid">
+
+    <!-- Wallet Card -->
+    <div class="card">
+      <div class="card-badge cb-e">👛</div>
+      <div class="card-label">Connected Wallet</div>
+      <div class="card-val mono" id="displayAddr">—</div>
+      <div class="addr-sub" id="displayFull"></div>
+      <div style="margin-top:20px;">
+        <button class="btn btn-primary btn-full" id="btnConnect">
+          <div class="btn-spin"></div>
+          <span class="btn-txt">Connect MetaMask</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Balance Card -->
+    <div class="card">
+      <div class="card-badge cb-a">🪙</div>
+      <div class="card-label">Token Balance</div>
+      <div class="card-val big" id="displayBalance">—</div>
+      <div class="token-row">
+        <span class="token-chip">GLT</span>
+        <span class="contract-addr">0xC90f…534d · Sepolia</span>
+      </div>
+      <div style="margin-top:18px;">
+        <button class="btn btn-outline btn-full" id="btnRefreshBal" disabled>
+          <div class="btn-spin"></div>
+          <span class="btn-txt">↻ Refresh Balance</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Action Card -->
+    <div class="card span-2">
+
+      <!-- Transfer params -->
+      <div style="margin-bottom:22px;">
+        <div class="card-label" style="margin-bottom:14px;">Transfer Details</div>
+        <div class="field-row">
+          <div class="field">
+            <label>Recipient Address</label>
+            <input id="inpRecipient" type="text" placeholder="0xRecipient…" disabled />
+          </div>
+          <div class="field">
+            <label>Amount (GLT)</label>
+            <input id="inpAmount" type="number" placeholder="10" min="0.000001" step="any" value="10" disabled />
+          </div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Step 1: Sign -->
+      <div class="action-step" style="margin-bottom:0;">
+        <div class="step-info">
+          <div class="step-title">
+            <span class="step-badge">1</span>
+            Sign Gasless Permit
+          </div>
+          <div class="step-desc">
+            Generates an EIP-712 typed-data message. Your wallet signs off-chain — no transaction, zero gas.
+            Produces a cryptographic signature (<code>v, r, s</code>) that authorises the transfer.
+          </div>
+        </div>
+        <button class="btn btn-outline" id="btnSign" disabled style="flex-shrink:0;">
+          <div class="btn-spin"></div>
+          <span class="btn-txt">✍ Sign Permit</span>
+        </button>
+      </div>
+
+      <!-- Signature Preview -->
+      <div class="sig-preview" id="sigPreview">
+        <div class="sig-hdr">
+          <div class="sig-hdr-dot"></div>
+          EIP-712 Permit Signature
+        </div>
+        <div class="sig-body">
+          <span class="sk">owner</span>    <span class="sv" id="svOwner">—</span>
+          <span class="sk">spender</span>  <span class="sv" id="svSpender">—</span>
+          <span class="sk">value</span>    <span class="sv hl" id="svValue">—</span>
+          <span class="sk">nonce</span>    <span class="sv" id="svNonce">—</span>
+          <span class="sk">deadline</span> <span class="sv" id="svDeadline">—</span>
+          <span class="sk">v</span>        <span class="sv hl" id="svV">—</span>
+          <span class="sk">r</span>        <span class="sv" id="svR">—</span>
+          <span class="sk">s</span>        <span class="sv" id="svS">—</span>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Step 2: Execute -->
+      <div class="action-step">
+        <div class="step-info">
+          <div class="step-title">
+            <span class="step-badge">2</span>
+            Execute Gasless Transfer
+          </div>
+          <div class="step-desc">
+            Broadcasts <code>permit()</code> then <code>transferFrom()</code> on Sepolia.
+            In production a backend relayer pays the gas — you never need ETH for fees.
+          </div>
+        </div>
+        <button class="btn btn-acid" id="btnExecute" disabled style="flex-shrink:0;">
+          <div class="btn-spin"></div>
+          <span class="btn-txt">⚡ Execute Transfer</span>
+        </button>
+      </div>
+
+    </div><!-- /action card -->
+
+    <!-- Console Card -->
+    <div class="card span-2" style="padding:0;overflow:hidden;">
+      <div class="console-wrap" style="border:none;border-radius:var(--r-xl);">
+        <div class="console-bar">
+          <div class="mac-dots"><span class="d-r"></span><span class="d-y"></span><span class="d-g"></span></div>
+          <span class="console-ttl">relayer.log — Sepolia Testnet</span>
+          <button class="console-clear" id="btnClearLog">clear</button>
+        </div>
+        <div class="console-body" id="consoleLog">
+          <div class="log-row info">
+            <span class="log-ts">00:00:00</span>
+            <span class="log-msg">GaslessToken DApp ready — contract 0xC90f…534d on Sepolia<span class="cursor"></span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /card-grid -->
+</main>
+
+<footer>
+  GaslessToken &nbsp;·&nbsp; ERC20 Permit (EIP-2612) &nbsp;·&nbsp; Sepolia Testnet &nbsp;·&nbsp;
+  Contract: <a href="https://sepolia.etherscan.io/address/0xC90f0b6eC696aDf1ec281ecbbc43A9a5c2EB534d" target="_blank">0xC90f0b6e…EB534d ↗</a>
+  &nbsp;·&nbsp; ethers.js v5
+</footer>
+</div><!-- /shell -->
+
+<!-- Floating Gasless Badge -->
+<div class="gasless-float">
+  <div class="gf-dot"></div>
+  Gasless Mode Active &nbsp;·&nbsp; EIP-2612
+</div>
+
+<!-- Toast Rack -->
+<div class="toast-rack" id="toastRack"></div>
+
+
+<!-- ══════════════════════════════════════════════════════
+     JAVASCRIPT
+     ══════════════════════════════════════════════════════ -->
+<script>
+'use strict';
+
+/* ────────────────────────────────────────────────────────
+   ① CONFIG — single source of truth
+      All contract details are here. Change nothing else.
+   ──────────────────────────────────────────────────────── */
+const CFG = {
+  CHAIN_ID:       11155111,          // Sepolia
+  CHAIN_HEX:      '0xaa36a7',
+  CHAIN_NAME:     'Sepolia Testnet',
+  CONTRACT_ADDR:  '0xC90f0b6eC696aDf1ec281ecbbc43A9a5c2EB534d',
+
+  /* EIP-712 domain — MUST match your Solidity contract exactly.
+     If you used OpenZeppelin ERC20Permit, these defaults are correct. */
+  TOKEN_NAME:     'GaslessToken',   // matches EIP712("GaslessToken","1")
+  TOKEN_VERSION:  '1',
+  TOKEN_DECIMALS: 18,
+  TOKEN_SYMBOL:   'GLT',
+
+  /* Minimal ABI — only what we call */
+  ABI: [
+    'function name()                              view returns (string)',
+    'function symbol()                            view returns (string)',
+    'function decimals()                          view returns (uint8)',
+    'function balanceOf(address owner)            view returns (uint256)',
+    'function nonces(address owner)               view returns (uint256)',
+    'function DOMAIN_SEPARATOR()                  view returns (bytes32)',
+    'function permit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s)',
+    'function transferFrom(address from, address to, uint256 amount) returns (bool)',
+    'event Transfer(address indexed from, address indexed to, uint256 value)',
+  ],
+};
+
+/* ────────────────────────────────────────────────────────
+   ② APPLICATION STATE
+   ──────────────────────────────────────────────────────── */
+const S = {
+  provider:  null,
+  signer:    null,
+  account:   null,   // string: checksummed wallet address
+  chainId:   null,   // number
+  contract:  null,   // ethers.Contract instance
+  onSepolia: false,
+  permit: {
+    signed:   false,
+    owner:    null,
+    spender:  null,
+    value:    null,   // ethers BigNumber
+    deadline: null,   // unix seconds
+    v: null, r: null, s: null,
+  },
+};
+
+/* ────────────────────────────────────────────────────────
+   ③ DOM REFS
+   ──────────────────────────────────────────────────────── */
+const $  = id => document.getElementById(id);
+const UI = {
+  btnConnect:     $('btnConnect'),
+  btnRefreshBal:  $('btnRefreshBal'),
+  btnSign:        $('btnSign'),
+  btnExecute:     $('btnExecute'),
+  btnClearLog:    $('btnClearLog'),
+  btnSwitchNet:   $('btnSwitchNet'),
+  displayAddr:    $('displayAddr'),
+  displayFull:    $('displayFull'),
+  displayBalance: $('displayBalance'),
+  inpRecipient:   $('inpRecipient'),
+  inpAmount:      $('inpAmount'),
+  sigPreview:     $('sigPreview'),
+  netPill:        $('netPill'),
+  netPillTxt:     $('netPillTxt'),
+  netBanner:      $('netBanner'),
+  walletChip:     $('walletChip'),
+  wChipAddr:      $('wChipAddr'),
+  wAvatar:        $('wAvatar'),
+  consoleLog:     $('consoleLog'),
+  // sig fields
+  svOwner:$('svOwner'), svSpender:$('svSpender'), svValue:$('svValue'),
+  svNonce:$('svNonce'), svDeadline:$('svDeadline'),
+  svV:$('svV'), svR:$('svR'), svS:$('svS'),
+  // step nodes
+  sn1:$('sn1'), sn2:$('sn2'), sn3:$('sn3'),
+};
+
+/* ────────────────────────────────────────────────────────
+   ④ UTILITIES
+   ──────────────────────────────────────────────────────── */
+const trunc = (addr, f=6, b=4) => addr ? `${addr.slice(0,f)}…${addr.slice(-b)}` : '—';
+
+/* ── Logger ── */
+const log = (() => {
+  const _append = (msg, type) => {
+    const d   = new Date();
+    const ts  = [d.getHours(), d.getMinutes(), d.getSeconds()].map(n => String(n).padStart(2,'0')).join(':');
+    const row = document.createElement('div');
+    row.className = `log-row ${type}`;
+    row.innerHTML = `<span class="log-ts">${ts}</span><span class="log-msg">${msg}</span>`;
+    UI.consoleLog.appendChild(row);
+    UI.consoleLog.scrollTop = UI.consoleLog.scrollHeight;
+  };
+  return {
+    info:   m => _append(m, 'info'),
+    ok:     m => _append(m, 'success'),
+    err:    m => _append(m, 'error'),
+    warn:   m => _append(m, 'warn'),
+    plain:  m => _append(m, ''),
+    clear:  ()=> { UI.consoleLog.innerHTML = ''; _append('Console cleared.', 'info'); },
+  };
+})();
+
+/* ── Toast ── */
+const ICONS = { success:'✅', error:'❌', info:'ℹ️', warn:'⚠️' };
+function toast(title, body='', type='info', ms=5000) {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `
+    <div class="toast-icon">${ICONS[type]}</div>
+    <div>
+      <div class="toast-title">${title}</div>
+      ${body ? `<div class="toast-body">${body}</div>` : ''}
+    </div>`;
+  el.onclick = () => el.remove();
+  $('toastRack').appendChild(el);
+  setTimeout(() => {
+    el.style.cssText += 'transition:opacity .4s,transform .4s;opacity:0;transform:translateX(30px);';
+    setTimeout(() => el.remove(), 420);
+  }, ms);
+}
+
+/* ── Button loading ── */
+const setLoading = (btn, on) => { btn.classList.toggle('loading', on); btn.disabled = on; };
+
+/* ── Step progress ── */
+function setStep(n) {
+  [UI.sn1, UI.sn2, UI.sn3].forEach((el, i) => {
+    el.classList.remove('active','done');
+    if      (i+1 < n)  el.classList.add('done');
+    else if (i+1 === n) el.classList.add('active');
+  });
+}
+
+/* ────────────────────────────────────────────────────────
+   ⑤ NETWORK UI
+   ──────────────────────────────────────────────────────── */
+function applyNetworkUI(chainId) {
+  const ok = (chainId === CFG.CHAIN_ID);
+  S.onSepolia = ok;
+  UI.netPill.className  = `net-pill ${ok ? 'correct' : 'wrong'}`;
+  UI.netPillTxt.textContent = ok ? 'Sepolia ✓' : 'Wrong Network';
+  UI.netBanner.classList.toggle('show', !ok);
+  // Enable/disable action inputs
+  const canAct = !!S.account && ok;
+  UI.inpRecipient.disabled  = !canAct;
+  UI.inpAmount.disabled     = !canAct;
+  UI.btnSign.disabled       = !canAct;
+  UI.btnRefreshBal.disabled = !canAct;
+}
+
+/* ────────────────────────────────────────────────────────
+   ⑥ WALLET UI
+   ──────────────────────────────────────────────────────── */
+function applyWalletUI(addr) {
+  UI.displayAddr.textContent = trunc(addr, 8, 6);
+  UI.displayFull.textContent = addr;
+  UI.wChipAddr.textContent   = trunc(addr);
+  UI.walletChip.classList.add('connected');
+  // Deterministic avatar colour from address
+  const hue = parseInt(addr.slice(2,6), 16) % 360;
+  UI.wAvatar.style.background = `linear-gradient(135deg,hsl(${hue},75%,60%),hsl(${(hue+120)%360},75%,55%))`;
+  UI.btnConnect.querySelector('.btn-txt').textContent = 'Disconnect';
+  UI.btnConnect.className = 'btn btn-outline btn-full';
+}
+
+/* ────────────────────────────────────────────────────────
+   ⑦ LOAD BALANCE
+   ──────────────────────────────────────────────────────── */
+async function loadBalance() {
+  if (!S.contract || !S.account) return;
+  try {
+    const raw = await S.contract.balanceOf(S.account);
+    const fmt = ethers.utils.formatUnits(raw, CFG.TOKEN_DECIMALS);
+    UI.displayBalance.textContent = parseFloat(fmt).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:4});
+    log.ok(`Balance: ${parseFloat(fmt).toFixed(4)} ${CFG.TOKEN_SYMBOL}`);
+  } catch (e) {
+    log.err(`Balance fetch failed: ${e.message}`);
+    UI.displayBalance.textContent = '—';
+  }
+}
+
+/* ────────────────────────────────────────────────────────
+   ⑧ SETUP PROVIDER
+   ──────────────────────────────────────────────────────── */
+async function setupProvider() {
+  S.provider = new ethers.providers.Web3Provider(window.ethereum);
+  S.signer   = S.provider.getSigner();
+  S.account  = await S.signer.getAddress();
+  const net  = await S.provider.getNetwork();
+  S.chainId  = net.chainId;
+  S.contract = new ethers.Contract(CFG.CONTRACT_ADDR, CFG.ABI, S.signer);
+}
+
+/* ────────────────────────────────────────────────────────
+   ⑨ CONNECT WALLET
+   ──────────────────────────────────────────────────────── */
+UI.btnConnect.addEventListener('click', async () => {
+  if (S.account) { location.reload(); return; } // disconnect = reload
+
+  if (!window.ethereum) {
+    toast('MetaMask Required', 'Please install MetaMask to use this DApp.', 'error');
+    log.err('MetaMask not detected.');
+    return;
+  }
+
+  setLoading(UI.btnConnect, true);
+  log.info('Requesting wallet connection…');
+
+  try {
+    await window.ethereum.request({ method: 'eth_requestAccounts' });
+    await setupProvider();
+
+    applyWalletUI(S.account);
+    applyNetworkUI(S.chainId);
+    await loadBalance();
+
+    log.ok(`Connected: ${S.account}`);
+    log.info(`Network: chainId ${S.chainId} — ${S.onSepolia ? 'Sepolia ✓' : 'WRONG NETWORK — switch to Sepolia'}`);
+    toast('Wallet Connected', trunc(S.account), 'success');
+    if (S.onSepolia) setStep(2);
+    else toast('Wrong Network', 'Switch to Sepolia to proceed.', 'warn');
+
+  } catch (e) {
+    const msg = e.code === 4001 ? 'You rejected the connection request.' : e.message;
+    log.err(`Connect failed: ${msg}`);
+    toast('Connection Failed', msg, 'error');
+  }
+
+  setLoading(UI.btnConnect, false);
+});
+
+/* ────────────────────────────────────────────────────────
+   ⑩ SWITCH NETWORK
+   ──────────────────────────────────────────────────────── */
+async function switchToSepolia() {
+  try {
+    await window.ethereum.request({ method:'wallet_switchEthereumChain', params:[{chainId:CFG.CHAIN_HEX}] });
+  } catch (e) {
+    if (e.code === 4902) { // Chain not in MetaMask yet — add it
+      try {
+        await window.ethereum.request({
+          method: 'wallet_addEthereumChain',
+          params: [{
+            chainId:           CFG.CHAIN_HEX,
+            chainName:         CFG.CHAIN_NAME,
+            nativeCurrency:    { name:'ETH', symbol:'ETH', decimals:18 },
+            rpcUrls:           ['https://rpc.sepolia.org','https://ethereum-sepolia-rpc.publicnode.com'],
+            blockExplorerUrls: ['https://sepolia.etherscan.io'],
+          }],
+        });
+      } catch (ae) { toast('Network Add Failed', ae.message, 'error'); }
+    } else if (e.code !== 4001) {
+      toast('Switch Failed', e.message, 'error');
+    }
+  }
+}
+
+UI.btnSwitchNet.addEventListener('click', switchToSepolia);
+UI.netPill.addEventListener('click', () => { if (!S.onSepolia) switchToSepolia(); });
+
+/* ────────────────────────────────────────────────────────
+   ⑪ REFRESH BALANCE
+   ──────────────────────────────────────────────────────── */
+UI.btnRefreshBal.addEventListener('click', async () => {
+  setLoading(UI.btnRefreshBal, true);
+  log.info('Fetching balance…');
+  await loadBalance();
+  setLoading(UI.btnRefreshBal, false);
+});
+
+/* ────────────────────────────────────────────────────────
+   ⑫ SIGN PERMIT  (EIP-712 typed-data — gasless!)
+   ──────────────────────────────────────────────────────── */
+UI.btnSign.addEventListener('click', async () => {
+  const recipient = UI.inpRecipient.value.trim();
+  const amtStr    = UI.inpAmount.value.trim();
+
+  /* Validation */
+  if (!ethers.utils.isAddress(recipient)) {
+    toast('Invalid Address','Enter a valid checksummed recipient address.','warn');
+    log.warn('Rejected: invalid recipient address.');
+    return;
+  }
+  if (recipient.toLowerCase() === S.account.toLowerCase()) {
+    toast('Invalid Recipient','Cannot transfer to yourself.','warn');
+    return;
+  }
+  if (!amtStr || isNaN(amtStr) || parseFloat(amtStr) <= 0) {
+    toast('Invalid Amount','Enter a positive token amount.','warn');
+    log.warn('Rejected: invalid amount.');
+    return;
+  }
+  if (!S.onSepolia) {
+    toast('Wrong Network','Switch to Sepolia first.','error');
+    return;
+  }
+
+  setLoading(UI.btnSign, true);
+  log.info('Fetching nonce and building EIP-712 domain…');
+
+  try {
+    /* ── On-chain reads ── */
+    const nonce    = await S.contract.nonces(S.account);
+    const deadline = Math.floor(Date.now() / 1000) + 3600; // +1 hour
+    const value    = ethers.utils.parseUnits(amtStr, CFG.TOKEN_DECIMALS);
+
+    log.info(`Nonce: ${nonce.toString()} | Deadline: ${new Date(deadline*1000).toLocaleTimeString()}`);
+
+    /*
+     * EIP-712 DOMAIN
+     * ─────────────────────────────────────────────────────────────────
+     * These four fields must EXACTLY match what your contract passes to
+     * EIP712("GaslessToken","1") in its constructor (OpenZeppelin default).
+     * A single character mismatch = "invalid signature" on-chain.
+     */
+    const domain = {
+      name:              CFG.TOKEN_NAME,    // "GaslessToken"
+      version:           CFG.TOKEN_VERSION, // "1"
+      chainId:           CFG.CHAIN_ID,      // 11155111
+      verifyingContract: CFG.CONTRACT_ADDR,
+    };
+
+    /* EIP-712 type hash for Permit */
+    const types = {
+      Permit: [
+        { name:'owner',    type:'address' },
+        { name:'spender',  type:'address' },
+        { name:'value',    type:'uint256' },
+        { name:'nonce',    type:'uint256' },
+        { name:'deadline', type:'uint256' },
+      ],
+    };
+
+    /* Permit message */
+    const message = {
+      owner:    S.account,
+      spender:  recipient,
+      value:    value,
+      nonce:    nonce,
+      deadline: deadline,
+    };
+
+    log.info('Requesting EIP-712 off-chain signature (no gas required)…');
+
+    /*
+     * ethers._signTypedData → MetaMask: eth_signTypedData_v4
+     * This produces a SIGNATURE, not a transaction.
+     * The user signs for free. No ETH spent.
+     */
+    const rawSig = await S.signer._signTypedData(domain, types, message);
+    const { v, r, s } = ethers.utils.splitSignature(rawSig);
+
+    /* Persist in state */
+    Object.assign(S.permit, { signed:true, owner:S.account, spender:recipient, value, deadline, v, r, s });
+
+    /* ── Update preview panel ── */
+    UI.svOwner.textContent   = trunc(S.account, 12, 10);
+    UI.svSpender.textContent = trunc(recipient, 12, 10);
+    UI.svValue.textContent   = `${amtStr} ${CFG.TOKEN_SYMBOL}`;
+    UI.svNonce.textContent   = nonce.toString();
+    UI.svDeadline.textContent= `${new Date(deadline*1000).toLocaleTimeString()} (unix: ${deadline})`;
+    UI.svV.textContent       = v;
+    UI.svR.textContent       = trunc(r, 14, 8);
+    UI.svS.textContent       = trunc(s, 14, 8);
+    UI.sigPreview.classList.add('open');
+
+    UI.btnExecute.disabled = false;
+
+    log.ok(`Permit signed! v=${v}`);
+    log.ok(`r = ${r.slice(0,16)}…`);
+    log.ok(`s = ${s.slice(0,16)}…`);
+    log.info('Signature ready. Click "Execute Transfer" to relay on-chain.');
+    toast('Permit Signed ✍','Signature obtained — ready to execute.','success');
+    setStep(3);
+
+  } catch (e) {
+    if (e.code === 4001) {
+      log.warn('User rejected the signature request.');
+      toast('Signature Rejected','You declined signing the permit.','warn');
+    } else {
+      log.err(`Sign error: ${e.message}`);
+      toast('Signing Failed', e.message.slice(0,80), 'error');
+    }
+  }
+
+  setLoading(UI.btnSign, false);
+});
+
+/* ────────────────────────────────────────────────────────
+   ⑬ EXECUTE GASLESS TRANSFER
+      Calls permit() → transferFrom() — simulating a relayer.
+      In production your backend would call these, paying the gas.
+   ──────────────────────────────────────────────────────── */
+UI.btnExecute.addEventListener('click', async () => {
+  if (!S.permit.signed) { toast('Sign First','Sign a permit before executing.','warn'); return; }
+
+  setLoading(UI.btnExecute, true);
+  log.plain('─'.repeat(48));
+  log.info('Relayer simulation starting…');
+
+  const { owner, spender, value, deadline, v, r, s } = S.permit;
+
+  try {
+    /* ── A: permit() ────────────────────────────────────
+       Sets the on-chain allowance using the off-chain signature.
+       Relayer pays gas; owner (you) pays nothing.              */
+    log.info('Broadcasting permit(owner, spender, value, deadline, v, r, s)…');
+
+    const permitTx = await S.contract.permit(
+      owner, spender, value, deadline, v, r, s,
+      { gasLimit: 120_000 }
+    );
+    log.warn(`permit() pending → ${trunc(permitTx.hash, 14, 8)}`);
+    log.info(`Etherscan → https://sepolia.etherscan.io/tx/${permitTx.hash}`);
+
+    const permitRcpt = await permitTx.wait();
+    log.ok(`permit() confirmed in block #${permitRcpt.blockNumber} ✓`);
+
+    /* ── B: transferFrom() ──────────────────────────────
+       Moves tokens using the allowance set by permit().
+       Relayer pays gas here too.                              */
+    log.info('Broadcasting transferFrom(owner, spender, value)…');
+
+    const transferTx = await S.contract.transferFrom(
+      owner, spender, value,
+      { gasLimit: 100_000 }
+    );
+    log.warn(`transferFrom() pending → ${trunc(transferTx.hash, 14, 8)}`);
+
+    const transferRcpt = await transferTx.wait();
+    log.ok(`transferFrom() confirmed in block #${transferRcpt.blockNumber} ✓`);
+    log.ok('🎉 GASLESS TRANSFER COMPLETE!');
+    log.plain('─'.repeat(48));
+
+    const amtFmt = ethers.utils.formatUnits(value, CFG.TOKEN_DECIMALS);
+    toast(
+      'Transfer Complete 🎉',
+      `${parseFloat(amtFmt).toFixed(4)} ${CFG.TOKEN_SYMBOL} → ${trunc(spender)}`,
+      'success', 8000
+    );
+
+    /* Reset state, refresh balance */
+    await loadBalance();
+    S.permit.signed = false;
+    UI.btnExecute.disabled = true;
+    UI.sigPreview.classList.remove('open');
+    UI.inpRecipient.value = '';
+    setStep(2);
+
+  } catch (e) {
+    if (e.code === 4001) {
+      log.warn('User rejected the transaction.');
+      toast('Transaction Rejected','You declined executing the transfer.','warn');
+    } else if (e.message?.includes('ERC20Permit: invalid signature')) {
+      log.err('Invalid permit signature — EIP-712 domain mismatch. Check TOKEN_NAME/VERSION in CFG.');
+      toast('Invalid Signature','Domain name or version mismatch.','error');
+    } else if (e.message?.includes('deadline')) {
+      log.err('Permit deadline expired. Please sign a new permit.');
+      toast('Permit Expired','Sign a fresh permit.','error');
+      S.permit.signed = false;
+      UI.btnExecute.disabled = true;
+      UI.sigPreview.classList.remove('open');
+      setStep(2);
+    } else if (e.message?.includes('insufficient funds')) {
+      log.err('Insufficient Sepolia ETH for gas. Top up wallet at a faucet.');
+      toast('No Gas','Get Sepolia ETH at sepoliafaucet.com','error');
+    } else if (e.message?.includes('nonce')) {
+      log.err('Nonce already used. Please re-sign the permit.');
+      toast('Nonce Used','Re-sign a new permit.','warn');
+      S.permit.signed = false;
+      UI.btnExecute.disabled = true;
+      UI.sigPreview.classList.remove('open');
+      setStep(2);
+    } else {
+      log.err(`Execution failed: ${e.message}`);
+      toast('Execution Failed', e.message.slice(0,90), 'error');
+    }
+  }
+
+  setLoading(UI.btnExecute, false);
+});
+
+/* ────────────────────────────────────────────────────────
+   ⑭ METAMASK EVENT LISTENERS
+   ──────────────────────────────────────────────────────── */
+if (window.ethereum) {
+  window.ethereum.on('accountsChanged', accs => {
+    if (accs.length === 0) { log.warn('Wallet disconnected.'); toast('Disconnected','Wallet disconnected.','warn'); }
+    log.info('Account changed — reloading…');
+    location.reload();
+  });
+
+  window.ethereum.on('chainChanged', async chainHex => {
+    const newId = parseInt(chainHex, 16);
+    log.info(`Network changed → chainId ${newId}`);
+    S.chainId = newId;
+    if (S.account) {
+      await setupProvider();
+      applyNetworkUI(newId);
+      await loadBalance();
+      if (newId === CFG.CHAIN_ID) {
+        toast('Switched to Sepolia','You are now on the correct network.','success');
+        setStep(2);
+      } else {
+        toast('Wrong Network','Switch back to Sepolia.','error');
+        setStep(1);
+      }
+    }
+  });
+}
+
+/* ────────────────────────────────────────────────────────
+   ⑮ AUTO-RECONNECT on page load
+   ──────────────────────────────────────────────────────── */
+(async () => {
+  if (!window.ethereum) return;
+  try {
+    const accs = await window.ethereum.request({ method:'eth_accounts' });
+    if (!accs.length) return;
+    log.info('Restoring previous session…');
+    await setupProvider();
+    applyWalletUI(S.account);
+    applyNetworkUI(S.chainId);
+    await loadBalance();
+    log.ok(`Session restored: ${trunc(S.account)}`);
+    if (S.onSepolia) setStep(2);
+  } catch (e) {
+    log.warn(`Auto-connect skipped: ${e.message}`);
+  }
+})();
+
+/* ── Clear log ── */
+UI.btnClearLog.addEventListener('click', () => log.clear());
+
+/* ────────────────────────────────────────────────────────
+   ⑯ PARTICLE BACKGROUND
+   ──────────────────────────────────────────────────────── */
+(() => {
+  const canvas = $('particle-canvas');
+  const ctx    = canvas.getContext('2d');
+  let W, H, dots;
+  const COLS = ['rgba(88,101,249,','rgba(139,92,246,','rgba(168,255,62,','rgba(192,132,252,'];
+  const mk   = () => ({
+    x: Math.random()*W, y: Math.random()*H,
+    r: Math.random()*1.8+0.4,
+    vx:(Math.random()-.5)*.22, vy:(Math.random()-.5)*.22,
+    a: Math.random(), da:(Math.random()-.5)*.005,
+    c: COLS[Math.floor(Math.random()*COLS.length)],
+  });
+  const resize = () => { W=canvas.width=innerWidth; H=canvas.height=innerHeight; };
+  const init   = () => { resize(); dots = Array.from({length:90},mk); };
+  const draw   = () => {
+    ctx.clearRect(0,0,W,H);
+    for (const d of dots) {
+      d.x+=d.vx; d.y+=d.vy; d.a+=d.da;
+      if(d.a<0||d.a>1) d.da*=-1;
+      if(d.x<0)d.x=W; if(d.x>W)d.x=0;
+      if(d.y<0)d.y=H; if(d.y>H)d.y=0;
+      ctx.beginPath();
+      ctx.arc(d.x,d.y,d.r,0,Math.PI*2);
+      ctx.fillStyle=`${d.c}${Math.max(0,Math.min(.6,d.a))})`;
+      ctx.fill();
+    }
+    requestAnimationFrame(draw);
+  };
+  window.addEventListener('resize', resize);
+  init(); draw();
+})();
+</script>
+</body>
+</html>
