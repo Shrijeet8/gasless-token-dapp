@@ -56,19 +56,6 @@
 
 ---
 
-## ⚙️ How It Works
-
-```mermaid
-graph TD
-    A[User connects MetaMask] --> B[Signs permit message off-chain]
-    B --> C[Signature generated v, r, s]
-    C --> D[Relayer calls permit()]
-    D --> E[Relayer calls transferFrom()]
-    E --> F[Tokens transferred — Zero gas paid by user!]
-```
-
----
-
 ## 🚀 Getting Started
 
 ### Prerequisites
