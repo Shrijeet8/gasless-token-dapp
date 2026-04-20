@@ -25,12 +25,10 @@
 ## 📸 Screenshots
 
 ### 🏠 Main Interface
-![Main App](./screenshots/demo1.png)
+![Main App](./screenshots/b1.png)
 
 ### 💸 Transfer Flow
-![Transfer](./screenshots/demo2.png)
-
----
+![Transfer](./screenshots/b2.png)
 
 ## 🔥 Features
 
